@@ -318,20 +318,20 @@ def decision_making(
         #     else:
         #         None
         # else:
-        for i in range(5):
-            arduino.write(grid_room1.encode("ascii"))
-            time.sleep(0.002)
-            arduino.write(room2_room1.encode("ascii"))
-            time.sleep(0.002)
-            # arduino.write(grid_chargers.encode("ascii"))
-            # time.sleep(0.000002)
-            # arduino.write(solar_room2.encode("ascii"))
-            # time.sleep(0.000002)
-            # arduino.write(room2_chargers.encode("ascii"))
-            # time.sleep(0.000002)
-            # arduino.write(grid_room2.encode("ascii"))
-            # time.sleep(0.000002)
-            # arduino.write(room2_grid.encode("ascii"))
+        # for i in range(5):
+        # arduino.write(grid_room1.encode("ascii"))
+        # time.sleep(0.002)
+        # arduino.write(room2_room1.encode("ascii"))
+        # time.sleep(0.002)
+        # arduino.write(grid_chargers.encode("ascii"))
+        # time.sleep(0.000002)
+        # arduino.write(solar_room2.encode("ascii"))
+        # time.sleep(0.000002)
+        # arduino.write(room2_chargers.encode("ascii"))
+        # time.sleep(0.000002)
+        # arduino.write(grid_room2.encode("ascii"))
+        # time.sleep(0.000002)
+        # arduino.write(room2_grid.encode("ascii"))
         # Defintion of constants
 
         for index, row in vehicle_arrival_data.iterrows():
@@ -373,7 +373,7 @@ def decision_making(
                         energy_cost,
                     )
                     print("charging with chargers")
-                return swapping_room_slots, number_of_battery_charged
+                # return swapping_room_slots, number_of_battery_charged
                 charge_vehicle(
                     env,
                     energy_price_grid,
