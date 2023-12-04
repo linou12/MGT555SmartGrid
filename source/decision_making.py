@@ -31,7 +31,7 @@ i = 0
 # read vehicul arrival data
 file_path = "data/vehicle_arrival.csv"
 df_vehicle = pd.read_csv(file_path)
-time_scaling_factor = 480 / (48 * 3600)
+time_scaling_factor = 200 / (48 * 3600)
 start_time = pd.Timestamp("2023-12-01 00:00:00")
 # Initialize the simulation environment with the specified start time
 env = simpy.rt.RealtimeEnvironment(
@@ -46,74 +46,33 @@ charging_time = vehicle_battery_capacity / charger_power
 energy_price_grid = 11  # in ct/kWh
 # Define the energy cost as a global variable it will be incremented if we charge with the grid
 energy_cost = 0
-solar_pannel_power = 10
+solar_pannel_power = 0
+
+simulation_duration = 48 * 3600 + env.now
 
 
 def my_simulation():
     time.sleep(0.02)
     while env.now < simulation_duration:
-        sim_time_datetime = datetime.utcfromtimestamp(env.now)
-        if sim_time_datetime.minute % 30 == 0 and sim_time_datetime.second == 0:
-            # for i in range(5):
-            # arduino.write(grid_room1.encode("ascii"))
-            # time.sleep(0.002)
-            # arduino.write(room2_room1.encode("ascii"))
+        decision_making(
+            env,
+            df_vehicle,
+            swapping_room_slots,
+            number_of_battery_charged,
+            stockage_room_level,
+            energy_price_grid,
+            vehicle_battery_capacity,
+            charging_time,
+            energy_cost,
+            solar_pannel_power,
+            # arduino,
+        )
 
-            threshold_pannel_power = 100
-
-            for index, row in df_vehicle.iterrows():
-                vehicle_id = row["Vehicle_ID"]
-                arrival_time = row["Date Time"]
-                arrival_time = datetime.strptime(arrival_time, "%Y-%m-%d %H:%M:%S")
-                # print("sim_time_datetime", sim_time_datetime)
-                if arrival_time == sim_time_datetime:
-                    print("arrival time", arrival_time)
-                    print("current time", sim_time_datetime)
-                    # Compare the arrival time in the dataset with the current simulation time
-                    if number_of_battery_charged > 0:
-                        for i, slot in enumerate(swapping_room_slots):
-                            if slot == 1:
-                                swapping_room_slots[i] = 0
-                                number_of_battery_charged -= 1
-                                print("charging with swapping room")
-                                (
-                                    traject,
-                                    stockage_room_level,
-                                    number_of_battery_charged,
-                                    swapping_room_slots,
-                                ) = charge_swapping_room(
-                                    env,
-                                    stockage_room_level,
-                                    swapping_room_slots,
-                                    number_of_battery_charged,
-                                    solar_pannel_power,
-                                    threshold_pannel_power,
-                                    charging_time,
-                                    energy_cost,
-                                )
-                                yield env.timeout(1 * time_scaling_factor)
-
-                                print("charging with swapping room")
-                                break
-                    else:
-                        charge_vehicle_with_chargers(
-                            env,
-                            energy_price_grid,
-                            stockage_room_level,
-                            vehicle_battery_capacity,
-                            charging_time,
-                            energy_cost,
-                        )
-                        print("charging with chargers")
-
-                    print("charging vehicle", vehicle_id)
-
-    yield env.timeout(10)
+        yield env.timeout(10)
 
     # Start the simulation with all the battery fully charged
 
 
-simulation_duration = 48 * 3600 + env.now
 # in seconds
 env.process(my_simulation())
 cProfile.run("my_simulation()")  # Run the simulation for a full day
