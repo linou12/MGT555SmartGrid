@@ -189,6 +189,7 @@ def charge_swapping_room(
             stockage_room_level,
             energy_cost,
         )
+        yield env.timeout(1)
         print("charging swapping room with grid")
     return traject, stockage_room_level, number_of_battery_charged, swapping_room_slots
 
@@ -393,6 +394,7 @@ def decision_making(
                                 charging_time,
                                 energy_cost,
                             )
+                            yield env.timeout(1)
 
                             print("charging with swapping room")
                             break

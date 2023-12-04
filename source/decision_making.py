@@ -69,7 +69,7 @@ def my_simulation():
     # Start the simulation with all the battery fully charged
 
 
-simulation_duration = 500 * 3600 + env.now
+simulation_duration = 48 * 3600 + env.now
 # in seconds
 env.process(my_simulation())
 cProfile.run("my_simulation()")  # Run the simulation for a full day
