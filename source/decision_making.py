@@ -8,19 +8,18 @@ import pandas as pd
 from helper import *
 
 # Initialize the serial connection
-comport = "/dev/tty.usbserial-110"  # change with the port u are using
-arduino = serial.Serial(comport, 9600)
-time.sleep(2)
+# comport = "/dev/tty.usbserial-110"  # change with the port u are using
+# arduino = serial.Serial(comport, 9600)
+# time.sleep(2)
 
 # Define the different energy trajectories as constants
-grid_room1 = "gR1"
-room1_room2 = "R2R1"
-grid_room2 = "gR2"
-room2_grid = "R2g"
-solar_room2 = "SR2"
-room2_chargers = "R2C"
-chargers_grid = "CR2g"
-grid_chargers = "gCR2"
+grid_room1 = "a"
+room1_room2 = "b"
+grid_room2 = "c"
+room2_grid = "d"
+solar_room2 = "e"
+room2_chargers = "f"
+grid_chargers = "h"
 
 
 # Vehicle battery level
@@ -63,7 +62,7 @@ def my_simulation():
             charging_time,
             energy_cost,
             solar_pannel_power,
-            arduino,
+            # arduino,
         )
         yield env.timeout(10)
 
@@ -80,6 +79,6 @@ env.run(
 
 
 # Close the serial connection
-arduino.close()
+# arduino.close()
 print("connection closed")
 # Close the serial connection
