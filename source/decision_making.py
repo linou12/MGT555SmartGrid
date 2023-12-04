@@ -35,7 +35,7 @@ time_scaling_factor = 480 / (48 * 3600)
 start_time = pd.Timestamp("2023-12-01 00:00:00")
 # Initialize the simulation environment with the specified start time
 env = simpy.rt.RealtimeEnvironment(
-    initial_time=start_time.timestamp(), factor=time_scaling_factor
+    initial_time=start_time.timestamp(), factor=time_scaling_factor, strict=False
 )
 swapping_room_slots = [1, 1, 1, 1, 1, 1, 1, 1, 1]
 number_of_battery_charged = 9
@@ -50,32 +50,22 @@ solar_pannel_power = 10
 
 
 def my_simulation():
+    time.sleep(0.02)
     while env.now < simulation_duration:
         sim_time_datetime = datetime.utcfromtimestamp(env.now)
         if sim_time_datetime.minute % 30 == 0 and sim_time_datetime.second == 0:
-            print("env.now", sim_time_datetime)
             # for i in range(5):
             # arduino.write(grid_room1.encode("ascii"))
             # time.sleep(0.002)
             # arduino.write(room2_room1.encode("ascii"))
-            # time.sleep(0.002)
-            # arduino.write(grid_chargers.encode("ascii"))
-            # time.sleep(0.000002)
-            # arduino.write(solar_room2.encode("ascii"))
-            # time.sleep(0.000002)
-            # arduino.write(room2_chargers.encode("ascii"))
-            # time.sleep(0.000002)
-            # arduino.write(grid_room2.encode("ascii"))
-            # time.sleep(0.000002)
-            # arduino.write(room2_grid.encode("ascii"))
-            # Defintion of constants
+
             threshold_pannel_power = 100
 
             for index, row in df_vehicle.iterrows():
                 vehicle_id = row["Vehicle_ID"]
                 arrival_time = row["Date Time"]
                 arrival_time = datetime.strptime(arrival_time, "%Y-%m-%d %H:%M:%S")
-                print("sim_time_datetime", sim_time_datetime)
+                # print("sim_time_datetime", sim_time_datetime)
                 if arrival_time == sim_time_datetime:
                     print("arrival time", arrival_time)
                     print("current time", sim_time_datetime)
@@ -115,17 +105,10 @@ def my_simulation():
                             energy_cost,
                         )
                         print("charging with chargers")
-                    # return swapping_room_slots, number_of_battery_charged
 
-                    # arduino.write(grid_room1.encode("ascii"))
-                    # time.sleep(0.000002)
-                    # arduino.write(room2_room1.encode("ascii"))
-                    # time.sleep(0.000002)
-                    # arduino.write(grid_chargers.encode("ascii"))
-                    # time.sleep(0.000002)
                     print("charging vehicle", vehicle_id)
 
-        yield env.timeout(15)
+    yield env.timeout(10)
 
     # Start the simulation with all the battery fully charged
 

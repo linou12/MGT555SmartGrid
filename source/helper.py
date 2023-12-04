@@ -6,8 +6,6 @@ import numpy as np
 import asyncio
 
 
-time_scaling_factor = 480 / (48 * 3600)
-start_time = pd.Timestamp("2023-12-01 00:00:00")
 # comport = "/dev/tty.usbserial-1110"  # change with the port u are using
 # arduino = serial.Serial(comport, 9600)
 # time.sleep(2)
@@ -80,7 +78,7 @@ def charge_stockage_room(
         trajectory, stockage_room_level = charge_stockage_room_with_solar_pannel(
             solar_pannel_power, stockage_room_level, charging_time * 9
         )
-        yield env.timeout(1 * time_scaling_factor)
+
     else:
         (
             trajectory,
@@ -89,7 +87,7 @@ def charge_stockage_room(
         ) = charge_stockage_room_with_grid(
             energy_price_grid, stockage_room_level, energy_cost
         )
-        yield env.timeout(1 * time_scaling_factor)
+
     return trajectory, stockage_room_level, energy_cost
 
 
@@ -154,7 +152,7 @@ def charge_swapping_room(
             charging_time,
             energy_cost,
         )
-        yield env.timeout(1 * time_scaling_factor)
+
         print("charging swapping room with stockage room")
 
     else:
@@ -171,7 +169,7 @@ def charge_swapping_room(
             stockage_room_level,
             energy_cost,
         )
-        yield env.timeout(1 * time_scaling_factor)
+
         print("charging swapping room with grid")
     return traject, stockage_room_level, number_of_battery_charged, swapping_room_slots
 
@@ -209,7 +207,7 @@ def charge_swapping_with_stockage(
             stockage_room_level,
             energy_cost,
         )
-        yield env.timeout(1 * time_scaling_factor)
+
         return (
             room2_room1,
             stockage_room_level,
