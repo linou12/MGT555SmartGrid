@@ -75,7 +75,7 @@ def my_simulation():
                 vehicle_id = row["Vehicle_ID"]
                 arrival_time = row["Date Time"]
                 arrival_time = datetime.strptime(arrival_time, "%Y-%m-%d %H:%M:%S")
-                # print("sim_time_datetime", sim_time_datetime)
+                print("sim_time_datetime", sim_time_datetime)
                 if arrival_time == sim_time_datetime:
                     print("arrival time", arrival_time)
                     print("current time", sim_time_datetime)
