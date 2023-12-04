@@ -6,7 +6,7 @@ import numpy as np
 import asyncio
 
 
-time_scaling_factor = 3600 / 10
+time_scaling_factor = 480 / (48 * 3600)
 start_time = pd.Timestamp("2023-12-01 00:00:00")
 # comport = "/dev/tty.usbserial-1110"  # change with the port u are using
 # arduino = serial.Serial(comport, 9600)
@@ -31,57 +31,6 @@ electricity_price = pd.read_csv("data/electricity_price.csv")  # in euro/kWh
 
 # Define constants based on assumptions
 energy_price_grid = 11  # in ct/kW
-
-
-def charge_vehicle(
-    current_time,
-    energy_price_grid,
-    swapping_room_slots,
-    number_of_battery_charged,
-    stockage_room_level,
-    vehicle_battery_capacity,
-    charging_time,
-    energy_cost,
-):
-    """
-    We charge the vehicle :
-    Two cases :
-        (1) We charge the vehicle with the swapping batteries in room1
-        (2) We charge the vehicle with the chargers in the parking
-    return :
-    """
-    # if number_of_battery_charged > 0:
-    #     for i, slot in enumerate(swapping_room_slots):
-    #         if slot == 1:
-    #             swapping_room_slots[i] = 0
-    #             number_of_battery_charged -= 1
-    #             print("charging with swapping room")
-
-    #             (
-    #                 traject,
-    #                 stockage_room_level,
-    #                 number_of_battery_charged,
-    #                 swapping_room_slots,
-    #             ) = charge_swapping_room(
-    #                 current_time,
-    #                 stockage_room_level,
-    #                 swapping_room_slots,
-    #                 number_of_battery_charged,
-    #             )
-
-    #             print("charging with swapping room")
-    #             break
-    # else:
-    #     charge_vehicle_with_chargers(
-    #         current_time,
-    #         energy_price_grid,
-    #         stockage_room_level,
-    #         vehicle_battery_capacity,
-    #         charging_time,
-    #         energy_cost,
-    #     )
-    #     print("charging with chargers")
-    # return swapping_room_slots, number_of_battery_charged
 
 
 def charge_vehicle_with_chargers(
@@ -131,7 +80,7 @@ def charge_stockage_room(
         trajectory, stockage_room_level = charge_stockage_room_with_solar_pannel(
             solar_pannel_power, stockage_room_level, charging_time * 9
         )
-        yield env.timeout(1)
+        yield env.timeout(1 * time_scaling_factor)
     else:
         (
             trajectory,
@@ -140,58 +89,8 @@ def charge_stockage_room(
         ) = charge_stockage_room_with_grid(
             energy_price_grid, stockage_room_level, energy_cost
         )
-        yield env.timeout(1)
+        yield env.timeout(1 * time_scaling_factor)
     return trajectory, stockage_room_level, energy_cost
-
-
-def charge_swapping_room(
-    env,
-    stockage_room_level,
-    swapping_room_slots,
-    number_of_battery_charged,
-    solar_pannel_power,
-    threshold_pannel_power,
-    charging_time,
-    energy_cost,
-):
-    """We charge the swapping room with the stockage room or the grid"""
-
-    if stockage_room_level > 500:
-        (
-            traject,
-            stockage_room_level,
-            number_of_battery_charged,
-            swapping_room_slots,
-        ) = charge_swapping_with_stockage(
-            env,
-            number_of_battery_charged,
-            swapping_room_slots,
-            stockage_room_level,
-            solar_pannel_power,
-            threshold_pannel_power,
-            charging_time,
-            energy_cost,
-        )
-        yield env.timeout(1)
-        print("charging swapping room with stockage room")
-
-    else:
-        (
-            traject,
-            number_of_battery_charged,
-            swapping_room_slots,
-            energy_cost,
-        ) = charge_swapping_with_grid(
-            env,
-            number_of_battery_charged,
-            swapping_room_slots,
-            energy_price_grid,
-            stockage_room_level,
-            energy_cost,
-        )
-        yield env.timeout(1)
-        print("charging swapping room with grid")
-    return traject, stockage_room_level, number_of_battery_charged, swapping_room_slots
 
 
 def charge_stockage_room_with_solar_pannel(
@@ -227,6 +126,56 @@ def charge_stockage_room_with_grid(
         return "grid_room2", stockage_room_level, energy_cost
 
 
+def charge_swapping_room(
+    env,
+    stockage_room_level,
+    swapping_room_slots,
+    number_of_battery_charged,
+    solar_pannel_power,
+    threshold_pannel_power,
+    charging_time,
+    energy_cost,
+):
+    """We charge the swapping room with the stockage room or the grid"""
+
+    if stockage_room_level > 500:
+        (
+            traject,
+            stockage_room_level,
+            number_of_battery_charged,
+            swapping_room_slots,
+        ) = charge_swapping_with_stockage(
+            env,
+            number_of_battery_charged,
+            swapping_room_slots,
+            stockage_room_level,
+            solar_pannel_power,
+            threshold_pannel_power,
+            charging_time,
+            energy_cost,
+        )
+        yield env.timeout(1 * time_scaling_factor)
+        print("charging swapping room with stockage room")
+
+    else:
+        (
+            traject,
+            number_of_battery_charged,
+            swapping_room_slots,
+            energy_cost,
+        ) = charge_swapping_with_grid(
+            env,
+            number_of_battery_charged,
+            swapping_room_slots,
+            energy_price_grid,
+            stockage_room_level,
+            energy_cost,
+        )
+        yield env.timeout(1 * time_scaling_factor)
+        print("charging swapping room with grid")
+    return traject, stockage_room_level, number_of_battery_charged, swapping_room_slots
+
+
 def charge_swapping_with_stockage(
     env,
     number_of_battery_charged,
@@ -260,7 +209,7 @@ def charge_swapping_with_stockage(
             stockage_room_level,
             energy_cost,
         )
-        yield env.timeout(1)
+        yield env.timeout(1 * time_scaling_factor)
         return (
             room2_room1,
             stockage_room_level,
@@ -295,7 +244,7 @@ def charge_swapping_with_grid(
     return grid_room1, stockage_room_level, number_of_battery_charged, energy_cost
 
 
-def decision_making(
+def process(
     env,
     vehicle_arrival_data,
     swapping_room_slots,
@@ -310,43 +259,9 @@ def decision_making(
 ):
     # Define initial battery levels and constraints
     # prendre la valeur dnans le data frame au temps current et check si ya solar energy
-
     sim_time_datetime = datetime.utcfromtimestamp(env.now)
     if sim_time_datetime.minute % 30 == 0 and sim_time_datetime.second == 0:
         print("env.now", sim_time_datetime)
-        # arriving_vehicles = vehicle_arrival_data[
-        #     vehicle_arrival_data["Date Time"]
-        #     == sim_time_datetime.strftime("%Y-%m-%d %H:%M:%S")
-        # ]
-        # if arriving_vehicles.empty:
-        #     if stockage_room_level < 500 * 9 * 0.8:
-        #         # Call the function to charge the storage room
-        #         # Replace 'charge_storage_room' with the actual function name
-        #         traject, stockage_room_level, energy_cost = charge_stockage_room(
-        #             env,
-        #             solar_pannel_power,
-        #             100,
-        #             charging_time,
-        #             energy_price_grid,
-        #             stockage_room_level,
-        #             energy_cost,
-        #         )
-
-        #     elif number_of_battery_charged < 9:
-        #         (
-        #             traject,
-        #             stockage_room_level,
-        #             number_of_battery_charged,
-        #             swapping_room_slots,
-        #         ) = charge_swapping_room(
-        #             env,
-        #             stockage_room_level,
-        #             swapping_room_slots,
-        #             number_of_battery_charged,
-        #         )
-        #     else:
-        #         None
-        # else:
         # for i in range(5):
         # arduino.write(grid_room1.encode("ascii"))
         # time.sleep(0.002)
@@ -394,7 +309,7 @@ def decision_making(
                                 charging_time,
                                 energy_cost,
                             )
-                            yield env.timeout(1)
+                            yield env.timeout(1 * time_scaling_factor)
 
                             print("charging with swapping room")
                             break
@@ -409,16 +324,7 @@ def decision_making(
                     )
                     print("charging with chargers")
                 # return swapping_room_slots, number_of_battery_charged
-                charge_vehicle(
-                    env,
-                    energy_price_grid,
-                    swapping_room_slots,
-                    number_of_battery_charged,
-                    stockage_room_level,
-                    vehicle_battery_capacity,
-                    charging_time,
-                    energy_cost,
-                )
+
                 # arduino.write(grid_room1.encode("ascii"))
                 # time.sleep(0.000002)
                 # arduino.write(room2_room1.encode("ascii"))

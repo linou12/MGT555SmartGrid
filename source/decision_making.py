@@ -51,20 +51,81 @@ solar_pannel_power = 10
 
 def my_simulation():
     while env.now < simulation_duration:
-        decision_making(
-            env,
-            df_vehicle,
-            swapping_room_slots,
-            number_of_battery_charged,
-            stockage_room_level,
-            energy_price_grid,
-            vehicle_battery_capacity,
-            charging_time,
-            energy_cost,
-            solar_pannel_power,
-            # arduino,
-        )
-        yield env.timeout(10)
+        sim_time_datetime = datetime.utcfromtimestamp(env.now)
+        if sim_time_datetime.minute % 30 == 0 and sim_time_datetime.second == 0:
+            print("env.now", sim_time_datetime)
+            # for i in range(5):
+            # arduino.write(grid_room1.encode("ascii"))
+            # time.sleep(0.002)
+            # arduino.write(room2_room1.encode("ascii"))
+            # time.sleep(0.002)
+            # arduino.write(grid_chargers.encode("ascii"))
+            # time.sleep(0.000002)
+            # arduino.write(solar_room2.encode("ascii"))
+            # time.sleep(0.000002)
+            # arduino.write(room2_chargers.encode("ascii"))
+            # time.sleep(0.000002)
+            # arduino.write(grid_room2.encode("ascii"))
+            # time.sleep(0.000002)
+            # arduino.write(room2_grid.encode("ascii"))
+            # Defintion of constants
+            threshold_pannel_power = 100
+
+            for index, row in df_vehicle.iterrows():
+                vehicle_id = row["Vehicle_ID"]
+                arrival_time = row["Date Time"]
+                arrival_time = datetime.strptime(arrival_time, "%Y-%m-%d %H:%M:%S")
+                # print("sim_time_datetime", sim_time_datetime)
+                if arrival_time == sim_time_datetime:
+                    print("arrival time", arrival_time)
+                    print("current time", sim_time_datetime)
+                    # Compare the arrival time in the dataset with the current simulation time
+                    if number_of_battery_charged > 0:
+                        for i, slot in enumerate(swapping_room_slots):
+                            if slot == 1:
+                                swapping_room_slots[i] = 0
+                                number_of_battery_charged -= 1
+                                print("charging with swapping room")
+                                (
+                                    traject,
+                                    stockage_room_level,
+                                    number_of_battery_charged,
+                                    swapping_room_slots,
+                                ) = charge_swapping_room(
+                                    env,
+                                    stockage_room_level,
+                                    swapping_room_slots,
+                                    number_of_battery_charged,
+                                    solar_pannel_power,
+                                    threshold_pannel_power,
+                                    charging_time,
+                                    energy_cost,
+                                )
+                                yield env.timeout(1 * time_scaling_factor)
+
+                                print("charging with swapping room")
+                                break
+                    else:
+                        charge_vehicle_with_chargers(
+                            env,
+                            energy_price_grid,
+                            stockage_room_level,
+                            vehicle_battery_capacity,
+                            charging_time,
+                            energy_cost,
+                        )
+                        print("charging with chargers")
+                    # return swapping_room_slots, number_of_battery_charged
+
+                    # arduino.write(grid_room1.encode("ascii"))
+                    # time.sleep(0.000002)
+                    # arduino.write(room2_room1.encode("ascii"))
+                    # time.sleep(0.000002)
+                    # arduino.write(grid_chargers.encode("ascii"))
+                    # time.sleep(0.000002)
+                    print("charging vehicle", vehicle_id)
+
+        yield env.timeout(15)
 
     # Start the simulation with all the battery fully charged
 
