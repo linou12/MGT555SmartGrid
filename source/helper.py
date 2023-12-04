@@ -314,10 +314,10 @@ def decision_making(
     sim_time_datetime = datetime.utcfromtimestamp(env.now)
     if sim_time_datetime.minute % 30 == 0 and sim_time_datetime.second == 0:
         print("env.now", sim_time_datetime)
-        arriving_vehicles = vehicle_arrival_data[
-            vehicle_arrival_data["Date Time"]
-            == sim_time_datetime.strftime("%Y-%m-%d %H:%M:%S")
-        ]
+        # arriving_vehicles = vehicle_arrival_data[
+        #     vehicle_arrival_data["Date Time"]
+        #     == sim_time_datetime.strftime("%Y-%m-%d %H:%M:%S")
+        # ]
         # if arriving_vehicles.empty:
         #     if stockage_room_level < 500 * 9 * 0.8:
         #         # Call the function to charge the storage room
