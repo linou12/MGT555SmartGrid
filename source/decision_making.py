@@ -68,7 +68,7 @@ def my_simulation():
             # arduino,
         )
 
-        yield env.timeout(10)
+        yield env.timeout(2)
 
     # Start the simulation with all the battery fully charged
 
