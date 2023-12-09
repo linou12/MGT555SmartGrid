@@ -22,23 +22,18 @@ solar_room2 = "e"
 room2_chargers = "f"
 grid_chargers = "h"
 
-
-MAX_CAPACITY = 500 * 9  # in kWh
-
-
+MAX_BATTERY_CAPACITY = 500  # in kWh
+MAX_STORAGE_ROOM_CAPACITY = 4500  # in kWh
 # To use when everything works
 electricity_price = pd.read_csv("data/electricity_price.csv")  # in euro/kWh
-
 # Define constants based on assumptions
 energy_price_grid = 11  # in ct/kW
 
 
 def charge_vehicle_with_chargers(
-    current_time,
     energy_price_grid,
     stockage_room_level,
     vehicle_battery_capacity,
-    charging_time,
     energy_cost,
 ):
     """
@@ -48,11 +43,12 @@ def charge_vehicle_with_chargers(
         (2) We charge the vehicle with the grid and we pay the energy price
 
     return : energy trajectory"""
+    global MAX_BATTERY_CAPACITY
 
-    if stockage_room_level >= 100 / 9 * MAX_CAPACITY:
-        stockage_room_level -= 100 / 9 * MAX_CAPACITY
+    if stockage_room_level >= MAX_BATTERY_CAPACITY:
+        stockage_room_level -= MAX_BATTERY_CAPACITY
         print(
-            "charging with chargers + room2 , current room2 level: ",
+            "ROOM2 --> CHARGERS / Charging with chargers, current room2 level: ",
             stockage_room_level,
         )
         return room2_chargers, stockage_room_level, energy_cost
@@ -63,9 +59,7 @@ def charge_vehicle_with_chargers(
 
 
 def charge_stockage_room(
-    env,
     solar_pannel_power,
-    charging_time,
     energy_price_grid,
     stockage_room_level,
     energy_cost,
@@ -74,54 +68,56 @@ def charge_stockage_room(
     We charge the stockage room with the solar pannel or the grid
     return : energy trajectory, stockage_room_level, energy_cost
     """
+    global MAX_STORAGE_ROOM_CAPACITY
     # yield env.timeout(1)
-    if solar_pannel_power > 0:
-        trajectory, stockage_room_level = charge_stockage_room_with_solar_pannel(
-            env, solar_pannel_power, stockage_room_level, charging_time * 9
-        )
-        # arduino.write(trajectory.encode("ascii"))
+    charging_time = 1  # 1h
+    if stockage_room_level < MAX_STORAGE_ROOM_CAPACITY:
+        if solar_pannel_power > 10:
+            trajectory, stockage_room_level = charge_stockage_room_with_solar_pannel(
+                solar_pannel_power, stockage_room_level, charging_time
+            )
+            # arduino.write(trajectory.encode("ascii"))
 
+        else:
+            (
+                trajectory,
+                stockage_room_level,
+                energy_cost,
+            ) = charge_stockage_room_with_grid(
+                energy_price_grid, stockage_room_level, energy_cost
+            )
+            # arduino.write(trajectory.encode("ascii"))
+
+        return trajectory, stockage_room_level, energy_cost
     else:
-        (
-            trajectory,
-            stockage_room_level,
-            energy_cost,
-        ) = charge_stockage_room_with_grid(
-            env, energy_price_grid, stockage_room_level, energy_cost
-        )
-        # arduino.write(trajectory.encode("ascii"))
-
-    return trajectory, stockage_room_level, energy_cost
+        print("No need to charge the stockage room")
+        return "No", stockage_room_level, energy_cost
 
 
 def charge_swapping_room(
-    env,
     stockage_room_level,
     swapping_room_slots,
     number_of_battery_charged,
     solar_pannel_power,
-    charging_time,
     energy_cost,
 ):
     """We charge the swapping room with the stockage room or the grid"""
 
-    if stockage_room_level > 0.2 * MAX_CAPACITY:
+    if stockage_room_level > 0.2 * MAX_STORAGE_ROOM_CAPACITY:
         (
             traject,
             stockage_room_level,
             number_of_battery_charged,
             swapping_room_slots,
         ) = charge_swapping_with_stockage(
-            env,
             number_of_battery_charged,
             swapping_room_slots,
             stockage_room_level,
             solar_pannel_power,
-            charging_time,
             energy_cost,
         )
         # arduino.write(traject.encode("ascii"))
-        print("charging swapping room with stockage room")
+        print("STOCKAGE ROOM --> SWAPPING ROOM")
 
     else:
         (
@@ -130,7 +126,6 @@ def charge_swapping_room(
             swapping_room_slots,
             energy_cost,
         ) = charge_swapping_with_grid(
-            env,
             number_of_battery_charged,
             swapping_room_slots,
             energy_price_grid,
@@ -143,23 +138,23 @@ def charge_swapping_room(
 
 
 def charge_stockage_room_with_solar_pannel(
-    current_time, solar_pannel_power, stockage_room_level, charging_time
+    solar_pannel_power, stockage_room_level, charging_time
 ):
     """
     We charge the stockage room with the solar pannel ,
       the stockage room level is incremented depending on the charging time
     """
-    print("charging with solar panel")
     # yield current_time.timeout(1)
-    while stockage_room_level < MAX_CAPACITY:
-        stockage_room_level += solar_pannel_power*3600
-    print("charging with solar panel, current room2 level: ", stockage_room_level)
-    print("solar pannel --> STOCKAGE ROOM")
+    # # discret event simulation
+    stockage_room_level += (
+        stockage_room_level
+        + solar_pannel_power / MAX_STORAGE_ROOM_CAPACITY * charging_time
+    )
+    print("solar pannel --> STOCKAGE ROOM, current room2 level: ", stockage_room_level)
     return solar_room2, stockage_room_level
 
 
 def charge_stockage_room_with_grid(
-    current_time,
     energy_price_grid,
     stockage_room_level,
     energy_cost,
@@ -169,23 +164,18 @@ def charge_stockage_room_with_grid(
     energy cost is incremented
     """
     # yield current_time.timeout(1)
-    if stockage_room_level >= MAX_CAPACITY:
-        return "No", stockage_room_level, energy_cost
-    else:
-        while stockage_room_level < MAX_CAPACITY:
-            energy_cost += energy_price_grid / 100 * 500
-            stockage_room_level += 500
-        print("Charging with grid. Current room level:", stockage_room_level)
-        return "grid_room2", stockage_room_level, energy_cost
+    while stockage_room_level < MAX_STORAGE_ROOM_CAPACITY:
+        energy_cost += energy_price_grid / 100 * 500
+        stockage_room_level += 500
+    print("GRID --> STORAGE ROOM. Current room level:", stockage_room_level)
+    return grid_room2, stockage_room_level, energy_cost
 
 
 def charge_swapping_with_stockage(
-    env,
     number_of_battery_charged,
     swapping_room_slots,
     stockage_room_level,
     solar_pannel_power,
-    charging_time,
     energy_cost,
 ):
     """
@@ -194,21 +184,22 @@ def charge_swapping_with_stockage(
     """
     if number_of_battery_charged < 9:
         number_of_battery_charged += 1
-        swapping_room_slots[8 - number_of_battery_charged] = 1
+        for i, slot in enumerate(swapping_room_slots):
+            if slot == 0:
+                swapping_room_slots[i] = 1
         stockage_room_level -= 500
-        print(
-            "charging swapping room with stockage room, current swapping room level: ",
-            swapping_room_slots,
-        )
         trajectory, stockage_room_level, energy_cost = charge_stockage_room(
-            env,
             solar_pannel_power,
-            charging_time,
             energy_price_grid,
             stockage_room_level,
             energy_cost,
         )
         # arduino.write(trajectory.encode("ascii"))
+        print(
+            "STOCKAGE_ROOM -> SWAPPING_ROOM, current swapping room level: ",
+            swapping_room_slots,
+            number_of_battery_charged,
+        )
 
         return (
             room2_room1,
@@ -222,7 +213,6 @@ def charge_swapping_with_stockage(
 
 
 def charge_swapping_with_grid(
-    env,
     number_of_battery_charged,
     swapping_room_slots,
     energy_price_grid,
@@ -236,6 +226,9 @@ def charge_swapping_with_grid(
     while number_of_battery_charged < 9:
         energy_cost += energy_price_grid * 100 / 9
         number_of_battery_charged += 1
+        for i, slot in enumerate(swapping_room_slots):
+            if slot == 0:
+                swapping_room_slots[i] = 1
         swapping_room_slots[number_of_battery_charged] = 1
     print(
         "charging swapping room with grid, current swapping room level: ",
@@ -289,12 +282,10 @@ def decision_making(
                                 number_of_battery_charged,
                                 swapping_room_slots,
                             ) = charge_swapping_room(
-                                env,
                                 stockage_room_level,
                                 swapping_room_slots,
                                 number_of_battery_charged,
                                 solar_pannel_power,
-                                charging_time,
                                 energy_cost,
                             )
 
