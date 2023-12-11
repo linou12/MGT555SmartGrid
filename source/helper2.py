@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 
+start_time = pd.Timestamp("2023-12-01 00:00:00")
 # Constants for Arduino
 grid_room1 = "a"
 room2_room1 = "b"
@@ -21,12 +22,12 @@ df_PV = pd.read_csv("data/df_PV.csv")
 
 
 def decision_making(env, df_vehicle):
-    global swapping_room_slots
-
     # Get the current time
     current_time = datetime.utcfromtimestamp(env.now)
+
     # Check if the current time is a multiple of 30 minutes
     if current_time.minute % 30 == 0 and current_time.second == 0:
+        print("current_time = ", current_time)
         # CHARGE STOCKAGE ROOM
         solar_pannel_power = df_PV[
             df_PV["DateTime"] == current_time.strftime("%Y-%m-%d %H:%M:%S")
@@ -38,23 +39,22 @@ def decision_making(env, df_vehicle):
             pv_power = solar_pannel_power["Power"].values[0]
         if pv_power > 100:
             use_solar_pannel = 1
-        charge_stockage_room(env, pv_power, use_solar_pannel)
+        _ = charge_stockage_room(env, pv_power, use_solar_pannel)
         vehicle_here = 0
         vehicle = df_vehicle[
             df_vehicle["Date Time"] == current_time.strftime("%Y-%m-%d %H:%M:%S")
         ]
-        print("vehicle = ", vehicle)
-        print("CURRENT TIME = ", current_time.now())
+
         if not vehicle.empty:
             # Charge the vehicle
             vehicle_here = 1
-            charge_vehicle(env)
-            print(
-                "Vehicle {} charged at {}".format(vehicle["Vehicle_ID"], current_time)
-            )
+            traject = charge_vehicle(env)
+            print("Vehicle", vehicle["Vehicle_ID"].values[0], "is charging")
+            print("charged at", current_time)
+
         # CHARGE SWAPPING ROOM
 
-        charge_swapping_room(env, vehicle_here)
+        _ = charge_swapping_room(env, vehicle_here)
 
 
 def charge_swapping_room(env, vehicle_here):
@@ -66,9 +66,9 @@ def charge_swapping_room(env, vehicle_here):
             if swapping_room_slots[i] == 1:
                 swapping_room_slots[i] = 0
                 number_of_battery_charged -= 1
-                yield env.timeout(
-                    0.05
-                )  # assume it is the same charging time for all the batteries
+                # yield env.timeout(
+                #     0.05
+                # )  # assume it is the same charging time for all the batteries
 
         if (
             stockage_room_level
@@ -89,27 +89,32 @@ def charge_swapping_room(env, vehicle_here):
 
 def charge_stockage_room(env, pv_power, use_solar_pannel):
     global stockage_room_level
+
     if stockage_room_level < MAX_STOCKAGE_ROOM_LEVEL:
         if use_solar_pannel == 0:
             stockage_room_level += (
                 GRID_POWER / MAX_STOCKAGE_ROOM_LEVEL * 0.5
             )  # because we charge every 30 minutes
             print(" GRID --> ROOM2 at {}".format(env))
-            yield env.timeout(0.0005)
+            yield env.timeout(1)
             # arduino.write(grid_room2.encode("ascii"))
         else:
             stockage_room_level += pv_power / MAX_STOCKAGE_ROOM_LEVEL * 0.5
             # because we charge every 30 minutes
             print(" PV --> ROOM2 at {}".format(env))
-            yield env.timeout(0.0005)
+            yield env.timeout(1)
             # arduino.write(solar_room2.encode("ascii"))
 
 
 def charge_vehicle(env):
     # global number_of_battery_charged
     # global swapping_room_slots
+    global number_of_battery_charged
+    global stockage_room_level
+
     print("number_of_battery_charged = ", number_of_battery_charged)
     print("swapping_room_slots = ", swapping_room_slots)
+    traject = ""
     if number_of_battery_charged > 1:
         print("SWAPPING ROOM --> VEHICLE at {}".format(env))
         print("number_of_battery_charged = ", number_of_battery_charged)
@@ -127,8 +132,11 @@ def charge_vehicle(env):
                 GRID_POWER / MAX_STOCKAGE_ROOM_LEVEL * 0.5
             )  # because we charge every 30 minutes
             print("Stockage room is discharging ... level = ", stockage_room_level)
-            yield env.timeout(0.5)
+            traject = "ROOM2 --> CHARGERS"
+            # yield env.timeout(1)
             # arduino.write(room2_chargers.encode("ascii"))
         else:
-            yield env.timeout(0.5)
+            traject = "ROOM2 --> CHARGERS"
+            # yield env.timeout(1)
             # arduino.write(grid_chargers.encode("ascii"))
+    return traject
