@@ -10,7 +10,7 @@ data = []
 
 # Generate vehicle arrival times ensuring at least 15 and at most 20 vehicles per day for December 1st and 2nd
 for day in ["2023-12-01", "2023-12-02"]:
-    vehicles_for_day = randint(15, 20)
+    vehicles_for_day = randint(40, 50)
     day_indices = date_range[date_range.strftime("%Y-%m-%d") == day].tolist()
     random_indices = [randint(0, len(day_indices) - 1) for _ in range(vehicles_for_day)]
     day_vehicles = [
