@@ -9,9 +9,8 @@ import pandas as pd
 from helper2 import *
 
 # Initialize the serial connection
-comport = "/dev/tty.usbserial-1140"  # change with the port u are using
+comport = "/dev/tty.usbserial-140"  # change with the port u are using
 arduino = Serial(comport, 9600)
-arduino = 10
 time.sleep(2)
 
 # Define the different energy trajectories as constants
