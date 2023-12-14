@@ -35,6 +35,10 @@ def decision_making(env, df_vehicle, arduino):
     # Check if the current time is a multiple of 30 minutes
     if current_time.minute % 30 == 0 and current_time.second == 0:
         ENERGY_COST += 4
+        PERCENTAGE_STOCKAGE_ROOM_CHARGE = (
+            round(PERCENTAGE_STOCKAGE_ROOM_CHARGE / 10) * 10
+        )
+        print(PERCENTAGE_STOCKAGE_ROOM_CHARGE)
 
         message = "{},{}\n".format(
             number_of_battery_charged, PERCENTAGE_STOCKAGE_ROOM_CHARGE
