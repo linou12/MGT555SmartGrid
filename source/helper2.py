@@ -253,7 +253,7 @@ def charge_vehicle(env, arduino):
                 swapping_room_slots[i] = 0
                 number_of_battery_charged -= 1
                 break
-        arduino.write(number_of_battery_charged.encode("ascii"))
+
         # print("AFTER CHARGING number_of_battery_charged = ", number_of_battery_charged)
         # print("AFTER CHARGING swapping_room_slots = ", swapping_room_slots)
     else:
