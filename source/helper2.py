@@ -12,12 +12,34 @@ room2_grid = "d"
 solar_room2 = "e"
 room2_chargers = "f"
 grid_chargers = "h"
+charge_0 = "g"
+charge_1 = "i"
+charge_2 = "j"
+charge_3 = "k"
+charge_4 = "l"
+charge_5 = "m"
+charge_6 = "n"
+charge_7 = "o"
+charge_8 = "p"
+charge_9 = "q"
+percentage_0 = "A"
+percentage_1 = "B"
+percentage_2 = "C"
+percentage_3 = "D"
+percentage_4 = "E"
+percentage_5 = "F"
+percentage_6 = "G"
+percentage_7 = "H"
+percentage_8 = "I"
+percentage_9 = "J"
+percentage_10 = "K"
+
 
 ENERGY_COST = 0
 MAX_BATTERY_CAPACITY = 500  # in kWh
 MAX_STOCKAGE_ROOM_LEVEL = 4500
 PERCENTAGE_STOCKAGE_ROOM_CHARGE = 100  # in kWh
-GRID_POWER = 180  # in kW
+GRID_POWER = 300  # in kW
 swapping_room_slots = [1, 1, 1, 1, 1, 1, 1, 1, 1]
 stockage_room_level = MAX_STOCKAGE_ROOM_LEVEL
 number_of_battery_charged = 9
@@ -34,17 +56,16 @@ def decision_making(env, df_vehicle, arduino):
 
     # Check if the current time is a multiple of 30 minutes
     if current_time.minute % 30 == 0 and current_time.second == 0:
-        ENERGY_COST += 4
         PERCENTAGE_STOCKAGE_ROOM_CHARGE = (
             round(PERCENTAGE_STOCKAGE_ROOM_CHARGE / 10) * 10
         )
         print(PERCENTAGE_STOCKAGE_ROOM_CHARGE)
-
-        message = "{},{}\n".format(
-            number_of_battery_charged, PERCENTAGE_STOCKAGE_ROOM_CHARGE
-        )
+        message_battery = switch_battery_level(PERCENTAGE_STOCKAGE_ROOM_CHARGE)
+        print(message_battery)
+        arduino.write(message_battery.encode("ascii"))
+        message = switch(number_of_battery_charged)
         arduino.write(message.encode("ascii"))
-        # arduino.write(ENERGY_COST.encode("ascii")
+        print(message)
 
         # print("current_time = ", current_time)
         # print("-----------------------------------")
@@ -83,10 +104,61 @@ def decision_making(env, df_vehicle, arduino):
         _ = charge_swapping_room(env, vehicle_here, arduino)
 
 
+def switch_battery_level(percentage):
+    i = percentage
+    if i == 0:
+        return percentage_0
+    elif i == 10:
+        return percentage_1
+    elif i == 20:
+        return percentage_2
+    elif i == 30:
+        return percentage_3
+    elif i == 40:
+        return percentage_4
+    elif i == 50:
+        return percentage_5
+    elif i == 60:
+        return percentage_6
+    elif i == 70:
+        return percentage_7
+    elif i == 80:
+        return percentage_8
+    elif i == 90:
+        return percentage_9
+    elif i == 100:
+        return percentage_10
+
+
+def switch(number_of_battery_charged):
+    i = number_of_battery_charged
+    if i == 0:
+        return charge_0
+    elif i == 1:
+        return charge_1
+    elif i == 2:
+        return charge_2
+    elif i == 3:
+        return charge_3
+    elif i == 4:
+        return charge_4
+    elif i == 5:
+        return charge_5
+    elif i == 6:
+        return charge_6
+    elif i == 7:
+        return charge_7
+    elif i == 8:
+        return charge_8
+    elif i == 9:
+        return charge_9
+
+
 def charge_swapping_room(env, vehicle_here, arduino):
     global swapping_room_slots
     global number_of_battery_charged
     global stockage_room_level
+    global PERCENTAGE_STOCKAGE_ROOM_CHARGE
     traject = ""
 
     if number_of_battery_charged < 9 and vehicle_here == 0:
@@ -95,13 +167,16 @@ def charge_swapping_room(env, vehicle_here, arduino):
                 swapping_room_slots[i] = 1
                 number_of_battery_charged += 1
             break
-        # arduino.write(number_of_battery_charged.encode("ascii"))
+        arduino.write(number_of_battery_charged.encode("ascii"))
         # print("SWAPPING ROOM IS CHARGING ...")
         # print("number_of_battery_charged = ", number_of_battery_charged)
         env.timeout(0.05)
         # )  # assume it is the same charging time for all the batteries
+        current_time = datetime.utcfromtimestamp(env.now)
+        current_time_heure = current_time.hour
+        day = 1 if current_time_heure > 7 and current_time_heure < 19 else 0
 
-        if stockage_room_level > 1 / 9 * MAX_STOCKAGE_ROOM_LEVEL:  # TO IMPROVE
+        if stockage_room_level > 2 / 9 * MAX_STOCKAGE_ROOM_LEVEL and day:  # TO IMPROVE
             # print("ROOM2 --> SWAPPING ROOM ")
             traject = room2_room1
             stockage_room_level -= 500  # 0.5 * GRID_POWER / MAX_STOCKAGE_ROOM_LEVEL
@@ -111,16 +186,13 @@ def charge_swapping_room(env, vehicle_here, arduino):
             env.timeout(0.5)
             PERCENTAGE_STOCKAGE_ROOM_CHARGE = (
                 stockage_room_level / MAX_STOCKAGE_ROOM_LEVEL
-            )
-            # arduino.write(PERCENTAGE_STOCKAGE_ROOM_CHARGE.encode("ascii"))
-            # arduino.write(room2_room1.encode("ascii"))
-
-            # arduino.write()
+            ) * 100
+            arduino.write(room2_room1.encode("ascii"))
         else:
             traject = grid_room1
             # print("GRID --> SWAPPING ROOM ")
             env.timeout(0.5)
-            # arduino.write(grid_room1.encode("ascii"))
+            arduino.write(grid_room1.encode("ascii"))
     return traject
 
 
@@ -143,9 +215,8 @@ def charge_stockage_room(env, pv_power, use_solar_pannel, arduino):
             env.timeout(0.5)
             PERCENTAGE_STOCKAGE_ROOM_CHARGE = (
                 stockage_room_level / MAX_STOCKAGE_ROOM_LEVEL
-            )
-            # arduino.write(PERCENTAGE_STOCKAGE_ROOM_CHARGE.encode("ascii"))
-            # arduino.write(grid_room2.encode("ascii"))
+            ) * 100
+            arduino.write(grid_room2.encode("ascii"))
         else:
             stockage_room_level += min(
                 pv_power / 2, MAX_STOCKAGE_ROOM_LEVEL - stockage_room_level
@@ -158,9 +229,8 @@ def charge_stockage_room(env, pv_power, use_solar_pannel, arduino):
             env.timeout(0.5)
             PERCENTAGE_STOCKAGE_ROOM_CHARGE = (
                 stockage_room_level / MAX_STOCKAGE_ROOM_LEVEL
-            )
-            # arduino.write(PERCENTAGE_STOCKAGE_ROOM_CHARGE.encode("ascii"))
-            # arduino.write(solar_room2.encode("ascii"))
+            ) * 100
+            arduino.write(solar_room2.encode("ascii"))
     return traject
 
 
@@ -183,13 +253,16 @@ def charge_vehicle(env, arduino):
                 swapping_room_slots[i] = 0
                 number_of_battery_charged -= 1
                 break
-        # arduino.write(number_of_battery_charged.encode("ascii"))
+        arduino.write(number_of_battery_charged.encode("ascii"))
         # print("AFTER CHARGING number_of_battery_charged = ", number_of_battery_charged)
         # print("AFTER CHARGING swapping_room_slots = ", swapping_room_slots)
     else:
         # print("-----------------------------------")
         # print("CHARGERS --> VEHICLE ")
-        if stockage_room_level >= MAX_BATTERY_CAPACITY:
+        current_time = datetime.utcfromtimestamp(env.now)
+        current_time_heure = current_time.hour
+        day = 1 if current_time_heure > 7 and current_time_heure < 19 else 0
+        if stockage_room_level >= 2 * MAX_BATTERY_CAPACITY and day:
             stockage_room_level -= 500  # (GRID_POWER / MAX_STOCKAGE_ROOM_LEVEL * 30 * 3600)  # because we charge every 30 minutes
             # print("Stockage room is discharging ... level = ", stockage_room_level)
             # print("ROOM2 --> CHARGERS ")
@@ -197,12 +270,11 @@ def charge_vehicle(env, arduino):
             env.timeout(0.5)
             PERCENTAGE_STOCKAGE_ROOM_CHARGE = (
                 stockage_room_level / MAX_STOCKAGE_ROOM_LEVEL
-            )
-            # arduino.write(PERCENTAGE_STOCKAGE_ROOM_CHARGE.encode("ascii"))
-            # arduino.write(room2_chargers.encode("ascii"))
+            ) * 100
+            arduino.write(room2_chargers.encode("ascii"))
         else:
             # print("GRID --> CHARGERS ")
             traject = grid_chargers
             env.timeout(0.5)
-            # arduino.write(grid_chargers.encode("ascii"))
+            arduino.write(grid_chargers.encode("ascii"))
     return traject

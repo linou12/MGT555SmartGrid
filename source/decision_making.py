@@ -11,6 +11,7 @@ from helper2 import *
 # Initialize the serial connection
 comport = "/dev/tty.usbserial-110"  # change with the port u are using
 arduino = Serial(comport, 9600)
+
 time.sleep(2)
 # arduino = 10
 
@@ -33,7 +34,7 @@ i = 0
 # read vehicul arrival data
 file_path = "data/vehicle_arrival.csv"
 df_vehicle = pd.read_csv(file_path)
-time_scaling_factor = 1 / 800  # 1 hour in simulation = 10 second in real life
+time_scaling_factor = 1 / 1600  # 1 hour in simulation = 10 second in real life
 start_time = pd.Timestamp("2023-12-01 00:00:00")
 # Initialize the simulation environment with the specified start time
 env = simpy.rt.RealtimeEnvironment(
