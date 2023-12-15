@@ -33,15 +33,19 @@ percentage_7 = "H"
 percentage_8 = "I"
 percentage_9 = "J"
 percentage_10 = "K"
+day_color = "M"
+night_color = "L"
+vehicle_is_here = "N"
+vehicle_not_here = "O"
 
 
 ENERGY_COST = 0
 MAX_BATTERY_CAPACITY = 500  # in kWh
 MAX_STOCKAGE_ROOM_LEVEL = 4500
-PERCENTAGE_STOCKAGE_ROOM_CHARGE = 100  # in kWh
+PERCENTAGE_STOCKAGE_ROOM_CHARGE = 70  # in kWh
 GRID_POWER = 300  # in kW
 swapping_room_slots = [1, 1, 1, 1, 1, 1, 1, 1, 1]
-stockage_room_level = MAX_STOCKAGE_ROOM_LEVEL
+stockage_room_level = 3150
 number_of_battery_charged = 9
 df_PV = pd.read_csv("data/df_PV.csv")
 
@@ -59,17 +63,11 @@ def decision_making(env, df_vehicle, arduino):
         PERCENTAGE_STOCKAGE_ROOM_CHARGE = (
             round(PERCENTAGE_STOCKAGE_ROOM_CHARGE / 10) * 10
         )
-        print(PERCENTAGE_STOCKAGE_ROOM_CHARGE)
         message_battery = switch_battery_level(PERCENTAGE_STOCKAGE_ROOM_CHARGE)
-        print(message_battery)
         arduino.write(message_battery.encode("ascii"))
         message = switch(number_of_battery_charged)
         arduino.write(message.encode("ascii"))
-        print(message)
 
-        # print("current_time = ", current_time)
-        # print("-----------------------------------")
-        # CHARGE STOCKAGE ROOM
         solar_pannel_power = df_PV[
             df_PV["DateTime"] == current_time.strftime("%Y-%m-%d %H:%M:%S")
         ]
@@ -82,6 +80,8 @@ def decision_making(env, df_vehicle, arduino):
             use_solar_pannel = 1
         _ = charge_stockage_room(env, pv_power, use_solar_pannel, arduino)
         vehicle_here = 0
+        arduino.write(vehicle_not_here.encode("ascii"))
+
         vehicle = df_vehicle[
             df_vehicle["Date Time"] == current_time.strftime("%Y-%m-%d %H:%M:%S")
         ]
@@ -89,13 +89,13 @@ def decision_making(env, df_vehicle, arduino):
         if not vehicle.empty:
             # Charge the vehicle
             vehicle_here = 1
+            arduino.write(vehicle_is_here.encode("ascii"))
             print("")
             print("")
             print("")
             print("VEHICLE ARRIVES AT", current_time)
             traject = charge_vehicle(env, arduino)
             print("Vehicle", vehicle["Vehicle_ID"].values[0], "is charging")
-            # print("charged at", current_time)
             print("")
             print("")
 
@@ -160,6 +160,7 @@ def charge_swapping_room(env, vehicle_here, arduino):
     global stockage_room_level
     global PERCENTAGE_STOCKAGE_ROOM_CHARGE
     traject = ""
+    i = number_of_battery_charged < 2
 
     if number_of_battery_charged < 9 and vehicle_here == 0:
         for i in range(len(swapping_room_slots)):
@@ -167,22 +168,18 @@ def charge_swapping_room(env, vehicle_here, arduino):
                 swapping_room_slots[i] = 1
                 number_of_battery_charged += 1
             break
-        arduino.write(number_of_battery_charged.encode("ascii"))
-        # print("SWAPPING ROOM IS CHARGING ...")
-        # print("number_of_battery_charged = ", number_of_battery_charged)
         env.timeout(0.05)
-        # )  # assume it is the same charging time for all the batteries
         current_time = datetime.utcfromtimestamp(env.now)
         current_time_heure = current_time.hour
         day = 1 if current_time_heure > 7 and current_time_heure < 19 else 0
+        if day:
+            arduino.write(day_color.encode("ascii"))
+        else:
+            arduino.write(night_color.encode("ascii"))
 
-        if stockage_room_level > 2 / 9 * MAX_STOCKAGE_ROOM_LEVEL and day:  # TO IMPROVE
-            # print("ROOM2 --> SWAPPING ROOM ")
+        if stockage_room_level > 1 / 9 * MAX_STOCKAGE_ROOM_LEVEL and day:
             traject = room2_room1
-            stockage_room_level -= 500  # 0.5 * GRID_POWER / MAX_STOCKAGE_ROOM_LEVEL
-            # print(
-            #     "Stockage room is discharging ... level = ", stockage_room_level
-            # )  # because we charge every 30 minutes
+            stockage_room_level -= 500
             env.timeout(0.5)
             PERCENTAGE_STOCKAGE_ROOM_CHARGE = (
                 stockage_room_level / MAX_STOCKAGE_ROOM_LEVEL
@@ -190,7 +187,6 @@ def charge_swapping_room(env, vehicle_here, arduino):
             arduino.write(room2_room1.encode("ascii"))
         else:
             traject = grid_room1
-            # print("GRID --> SWAPPING ROOM ")
             env.timeout(0.5)
             arduino.write(grid_room1.encode("ascii"))
     return traject
@@ -200,18 +196,17 @@ def charge_stockage_room(env, pv_power, use_solar_pannel, arduino):
     global stockage_room_level
     global PERCENTAGE_STOCKAGE_ROOM_CHARGE
     traject = ""
+    current_time = datetime.utcfromtimestamp(env.now)
+    current_time_heure = current_time.hour
+    day = 1 if current_time_heure > 7 and current_time_heure < 19 else 0
 
     if stockage_room_level < MAX_STOCKAGE_ROOM_LEVEL:
-        if use_solar_pannel == 0:
+        if use_solar_pannel == 0 and day == 0:
             stockage_room_level += min(
                 GRID_POWER / 2, MAX_STOCKAGE_ROOM_LEVEL - stockage_room_level
             )
-
-            # because we charge every 30 minutes
             traject = grid_room2
             print("")
-            # print(" GRID --> ROOM2 ")
-            # print(" Stockage room is charging ... level = ", stockage_room_level)
             env.timeout(0.5)
             PERCENTAGE_STOCKAGE_ROOM_CHARGE = (
                 stockage_room_level / MAX_STOCKAGE_ROOM_LEVEL
@@ -220,12 +215,8 @@ def charge_stockage_room(env, pv_power, use_solar_pannel, arduino):
         else:
             stockage_room_level += min(
                 pv_power / 2, MAX_STOCKAGE_ROOM_LEVEL - stockage_room_level
-            )  # MAX_STOCKAGE_ROOM_LEVEL * 0.5
-            # because we charge every 30 minutes
+            )
             traject = solar_room2
-            # print("")
-            # print(" PV --> ROOM2")
-            # print(" Stockage room is charging ... level = ", stockage_room_level)
             env.timeout(0.5)
             PERCENTAGE_STOCKAGE_ROOM_CHARGE = (
                 stockage_room_level / MAX_STOCKAGE_ROOM_LEVEL
@@ -235,34 +226,21 @@ def charge_stockage_room(env, pv_power, use_solar_pannel, arduino):
 
 
 def charge_vehicle(env, arduino):
-    # global number_of_battery_charged
-    # global swapping_room_slots
     global number_of_battery_charged
     global stockage_room_level
     global PERCENTAGE_STOCKAGE_ROOM_CHARGE
-    # print("-----------------------------------")
-    # print("BEFORE CHARGING number_of_battery_charged  = ", number_of_battery_charged)
-    # print("BEFORE CHARGING swapping_room_slots = ", swapping_room_slots)
     traject = ""
     if number_of_battery_charged >= 1:
-        # print("-----------------------------------")
-        # print("SWAPPING ROOM --> VEHICLE ")
-
         for i in range(len(swapping_room_slots)):
             if swapping_room_slots[i] == 1:
                 swapping_room_slots[i] = 0
                 number_of_battery_charged -= 1
                 break
-
-        # print("AFTER CHARGING number_of_battery_charged = ", number_of_battery_charged)
-        # print("AFTER CHARGING swapping_room_slots = ", swapping_room_slots)
     else:
-        # print("-----------------------------------")
-        # print("CHARGERS --> VEHICLE ")
         current_time = datetime.utcfromtimestamp(env.now)
         current_time_heure = current_time.hour
         day = 1 if current_time_heure > 7 and current_time_heure < 19 else 0
-        if stockage_room_level >= 2 * MAX_BATTERY_CAPACITY and day:
+        if stockage_room_level >= 1 * MAX_BATTERY_CAPACITY and day:
             stockage_room_level -= 500  # (GRID_POWER / MAX_STOCKAGE_ROOM_LEVEL * 30 * 3600)  # because we charge every 30 minutes
             # print("Stockage room is discharging ... level = ", stockage_room_level)
             # print("ROOM2 --> CHARGERS ")
@@ -273,7 +251,6 @@ def charge_vehicle(env, arduino):
             ) * 100
             arduino.write(room2_chargers.encode("ascii"))
         else:
-            # print("GRID --> CHARGERS ")
             traject = grid_chargers
             env.timeout(0.5)
             arduino.write(grid_chargers.encode("ascii"))

@@ -34,7 +34,7 @@ i = 0
 # read vehicul arrival data
 file_path = "data/vehicle_arrival.csv"
 df_vehicle = pd.read_csv(file_path)
-time_scaling_factor = 1 / 1600  # 1 hour in simulation = 10 second in real life
+time_scaling_factor = 1 / 1200  # 1 hour in simulation = 10 second in real life
 start_time = pd.Timestamp("2023-12-01 00:00:00")
 # Initialize the simulation environment with the specified start time
 env = simpy.rt.RealtimeEnvironment(
@@ -77,8 +77,7 @@ def my_simulation():
 
 
 # in seconds
-env.process(my_simulation())
-cProfile.run("my_simulation()")  # Run the simulation for a full day
+env.process(my_simulation())  # Run the simulation for a full day
 env.run(
     until=simulation_duration
 )  # Run the simulation for a full day (24 hours * 3600 seconds)
