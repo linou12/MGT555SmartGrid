@@ -9,7 +9,7 @@ import pandas as pd
 from helper2 import *
 
 # Initialize the serial connection
-comport = "/dev/tty.usbserial-110"  # change with the port u are using
+comport = "/dev/tty.usbserial-140"  # change with the port u are using
 arduino = Serial(comport, 9600)
 
 time.sleep(2)
